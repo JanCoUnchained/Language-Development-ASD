@@ -5,6 +5,8 @@ date: "01/07/2018"
 output: html_document
 ---
 
+This is a test, please ignore
+
 # Assignment 1, Part 1: Language development in Autism Spectrum Disorder (ASD) - Brushing up your code skills
 
 In this first part of the assignment we will brush up your programming skills, and make you familiar with the data sets you will be analysing for the next parts of the assignment.
@@ -42,7 +44,7 @@ If you created an rstudio project, then your working directory (the directory wi
 
 ```{r}
 
-
+getwd()
 ```
 
 Load the three data sets, after downloading them from dropbox and saving them in your working directory:
