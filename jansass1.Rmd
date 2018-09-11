@@ -229,6 +229,10 @@ kid3 <- data_3 %>%
   group_by(SUBJ) %>%
   mutate(n_visit = sum(VISIT)) %>%
   filter(n_visit >= 21)
+
+kid_123 <- kid1 %>%
+  inner_join(kid2) %>%
+  inner_join(kid3)
 ```
 
 
