@@ -55,7 +55,6 @@ Load the three data sets, after downloading them from dropbox and saving them in
 demo_raw <- read.csv("demo_train.csv")
 lu_raw <- read.csv("LU_train.csv")
 token_raw <- read.csv("token_train.csv")
-#Here we read all the data into R
 ```
 
 Explore the 3 datasets (e.g. visualize them, summarize them, etc.). You will see that the data is messy, since the psychologists collected the demographic data, a linguist analyzed the length of utterance in May 2014 and the same linguist analyzed the words several months later. In particular:
@@ -75,7 +74,7 @@ Tip: Or look through the chapter on data transformation in R for data science (h
 
 ```{r}
 demo <- demo_raw %>%
-  rename(SUBJ = Child.ID, VISIT = Visit) #last argument renamed to first argument. 
+  rename(SUBJ = Child.ID, VISIT = Visit)
 ```
 
 2b. Find a way to homogeneize the way "visit" is reported. If you look into the original data sets, you will see that in the LU data and the Token data, Visits are called "visit 1"" instead of just "1"" (which is the case in the demographic data set).
@@ -83,14 +82,14 @@ Tip: There is a package called stringr, which will be very handy for manipulatin
 
 ```{r}
 lu <- lu_raw %>%
-  mutate(VISIT = as.character(VISIT), #factor --> character bc. str_extract can't extract. 
-         VISIT = str_extract(VISIT, "[0-9]"), #regex indicating that we only want digits. 
-         VISIT = as.integer(VISIT)) #as integer, as there is now only digits. 
+  mutate(VISIT = as.character(VISIT),
+         VISIT = str_extract(VISIT, "(\\d)+"),
+         VISIT = as.integer(VISIT))
 
 
 token <- token_raw %>%
-  mutate(VISIT = as.character(VISIT), #same as above. 
-         VISIT = str_extract(VISIT, "[0-9]"),
+  mutate(VISIT = as.character(VISIT),
+         VISIT = str_extract(VISIT, "(\\d)+"),
          VISIT = as.integer(VISIT))
 ```
 
@@ -104,9 +103,8 @@ Tip: You will have to do identical work for both data sets, so to save time on t
 
 
 ```{r}
-#ifelse loop. First, detecting any lower case characters --> removing the last one if that is the case --> making it as.character because ifelse defaults to numeric. 
 lu_2 <- lu %>%
-  mutate(SUBJ = ifelse(str_detect(SUBJ, "[a-z]"), str_remove(SUBJ, ".$"), as.character(SUBJ))) 
+  mutate(SUBJ = ifelse(str_detect(SUBJ, "[a-z]"), str_remove(SUBJ, ".$"), as.character(SUBJ)))
 ```
 
 2d. Now that the nitty gritty details of the different data sets are fixed, we want to make a subset of each data set only containig the variables that we wish to use in the final data set.
@@ -125,13 +123,13 @@ It would be smart to rename the last two into something you can remember (i.e. n
 
 ```{r}
 int_var <- unlist(str_split("SUBJ, VISIT, Ethnicity, Diagnosis, Gender, Age, ADOS, MullenRaw, ExpressiveLangRaw, MOT_MLU, MOT_LUstd, CHI_MLU, CHI_LUstd, types_MOT, types_CHI, tokens_MOT, tokens_CHI"
-                     ,", ")) #creatign a list with all the variables we need. 
+                     ,", "))
 
 #https://github.com/tidyverse/dplyr/issues/3312
 
 demo_3 <- demo %>%
-  select(one_of(int_var)) %>% #selecting variables that are also in the list: one_of
-  rename(nonVerbalIQ = MullenRaw, verbalIQ = ExpressiveLangRaw) #renaming MullenRaw & ExpressiveLangRaw to nonVerbalIq & verbalIQ. 
+  select(one_of(int_var)) %>%
+  rename(nonVerbalIQ = MullenRaw, verbalIQ = ExpressiveLangRaw)
 
 lu_3 <- lu_2 %>%
   select(one_of(int_var))
@@ -145,12 +143,12 @@ Tip: Look up "joins" in R for data science, or google "How to merge datasets in 
 Tip: Joining / merging only works for two data frames at the time.
 
 ```{r}
-data <- demo_3 %>% #demo has to be first because it is the biggest
-  left_join(lu_3, by = c("SUBJ", "VISIT")) %>% #Joining SUBJ & VISIT which are common to all 
-  left_join(token_3, by = c("SUBJ", "VISIT")) #Left join ensures that it the incomplete rows are kept. 
+data <- demo_3 %>%
+  left_join(lu_3, by = c("SUBJ", "VISIT")) %>%
+  left_join(token_3, by = c("SUBJ", "VISIT"))
   
 
-rm(list=setdiff(ls(), "data")) #removing everything but the "data" from workspace. 
+rm(list=setdiff(ls(), "data")) 
 # https://stackoverflow.com/questions/6190051/how-can-i-remove-all-objects-but-one-from-the-workspace-in-r
 ```
 
@@ -169,11 +167,11 @@ So let's make sure that we select only these variables as collected during the f
 
 ```{r}
 # filter way
-data_2 <- data %>% #selecting variables with many NAs 
-  select(SUBJ, VISIT, ADOS_1 = ADOS, nonVerbalIQ_1 = nonVerbalIQ, verbalIQ_1 = verbalIQ) %>% 
-  filter(VISIT == 1) %>% #filtering by VISIT = 1
-  right_join(data, by = c("SUBJ")) %>% #right-join bypasses new steps. 
-  select(-VISIT.x, -ADOS, -nonVerbalIQ, -verbalIQ) %>% #
+data_2 <- data %>%
+  select(SUBJ, VISIT, ADOS_1 = ADOS, nonVerbalIQ_1 = nonVerbalIQ, verbalIQ_1 = verbalIQ) %>%
+  filter(VISIT == 1) %>%
+  right_join(data, by = c("SUBJ")) %>%
+  select(-VISIT.x, -ADOS, -nonVerbalIQ, -verbalIQ) %>%
   select(SUBJ, VISIT = VISIT.y, Diagnosis, Age, Gender, Ethnicity, 
          ADOS_1, nonVerbalIQ_1, verbalIQ_1, MOT_MLU:tokens_CHI)
 
@@ -194,8 +192,8 @@ Tip: google "R how to convert character to integer" or look up the as.??? functi
 ```{r}
 data_3 <- data_2 %>%
   mutate(SUBJ = as.integer(factor(SUBJ)),
-         Gender = ifelse(Gender == 1, "F", "M"), #changes the Gender 
-         Diagnosis = ifelse(Diagnosis == "A", "ASD", "TD")) #changes diagnosis
+         Gender = ifelse(Gender == 1, "F", "M"),
+         Diagnosis = ifelse(Diagnosis == "A", "ASD", "TD"))
 ```
 
 
@@ -219,18 +217,18 @@ List all kids who:
 
 ```{r}
 kid1 <- data_3 %>%
-  group_by(SUBJ) %>% 
-  summarise(m_CHI_MLU = mean(CHI_MLU)) %>% #creating a new variable. 
-  filter(m_CHI_MLU > 2.7) #filtering by specific value on this variable 
+  group_by(SUBJ) %>%
+  summarise(m_CHI_MLU = mean(CHI_MLU)) %>%
+  filter(m_CHI_MLU > 2.7)
 
 kid2 <- data_3 %>%
-  filter(VISIT == 1 & CHI_MLU < 1.5) %>% #filtering by vist & mlu
+  filter(VISIT == 1 & CHI_MLU < 1.5) %>%
   select(SUBJ, CHI_MLU)
 
 kid3 <- data_3 %>%
-  group_by(SUBJ) %>% 
-  mutate(n_visit = sum(VISIT)) %>% 
-  filter(n_visit >= 21) 
+  group_by(SUBJ) %>%
+  mutate(n_visit = sum(VISIT)) %>%
+  filter(n_visit >= 21)
 
 kid_123 <- kid1 %>%
   inner_join(kid2) %>%
