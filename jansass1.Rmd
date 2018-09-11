@@ -43,7 +43,7 @@ If you created an rstudio project, then your working directory (the directory wi
 ```{r message=FALSE, warning=FALSE}
 getwd()
 
-library(tidyverse)
+library(tidyverse) #
 ```
 
 Load the three data sets, after downloading them from dropbox and saving them in your working directory:
@@ -55,6 +55,7 @@ Load the three data sets, after downloading them from dropbox and saving them in
 demo_raw <- read.csv("demo_train.csv")
 lu_raw <- read.csv("LU_train.csv")
 token_raw <- read.csv("token_train.csv")
+#Here we read all the data into R
 ```
 
 Explore the 3 datasets (e.g. visualize them, summarize them, etc.). You will see that the data is messy, since the psychologists collected the demographic data, a linguist analyzed the length of utterance in May 2014 and the same linguist analyzed the words several months later. In particular:
