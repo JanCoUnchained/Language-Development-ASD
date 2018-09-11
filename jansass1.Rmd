@@ -1,5 +1,5 @@
 ---
-title: "A1_P1_Student"
+title: "A1_P1_Anders_Carl_Jan_Magnus_Vicotr"
 author: "Riccardo Fusaroli"
 date: "01/07/2018"
 output: html_document
@@ -191,7 +191,9 @@ Tip: google "R how to convert character to integer" or look up the as.??? functi
 
 ```{r}
 data_3 <- data_2 %>%
-  mutate(SUBJ = as.integer(factor(SUBJ)))
+  mutate(SUBJ = as.integer(factor(SUBJ)),
+         Gender = ifelse(Gender == 1, "F", "M"),
+         Diagnosis = ifelse(Diagnosis == "A", "ASD", "TD"))
 ```
 
 
@@ -236,8 +238,15 @@ USING ARRANGE
 2. Sort kids to find the kid who produced the least amount of words on the 1st visit.
 
 ```{r}
+data_3 %>%
+  filter(VISIT == 6) %>%
+  arrange(desc(tokens_CHI)) %>%
+  slice(1)
 
-
+data_3 %>%
+  filter(VISIT == 1) %>%
+  arrange(tokens_CHI) %>%
+  slice(1)
 ```
 
 USING SELECT
@@ -246,7 +255,11 @@ USING SELECT
 2. What happens if you include the name of a variable multiple times in a select() call?
 
 ```{r}
+mess <- data_3 %>%
+  filter(Diagnosis == "ASD") %>%
+  select(SUBJ, SUBJ, Diagnosis, CHI_MLU, CHI_MLU)
 
+# including a variable twice in the function call does not duplicate the variable in the resulting df
 ```
 
 
@@ -256,6 +269,13 @@ USING MUTATE, SUMMARISE and PIPES
 3. The solution to task above enables us to assess the average amount of words produced by each child. Why don't we just use these average values to describe the language production of the children? What is the advantage of keeping all the data?
 
 ```{r}
+pip1 <- data_3 %>%
+  group_by(SUBJ) %>%
+  mutate(m_CHI_MLU = mean(CHI_MLU))
 
+pip2 <- data_3 %>%
+  group_by(SUBJ) %>%
+  summarise(m_CHI_MLU = mean(CHI_MLU))
 
+# we can see the progress
 ```
