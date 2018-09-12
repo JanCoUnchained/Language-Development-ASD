@@ -239,6 +239,12 @@ kid3 <- data_3 %>%
   group_by(SUBJ) %>% 
   mutate(n_visit = sum(VISIT)) %>% 
   filter(n_visit >= 21) 
+
+#locating whether someone everyone
+superkid <- kid1 %>%
+  inner_join(kid2, by = c("SUBJ")) %>%
+  inner_join(kid3, by = c("SUBJ")) #SUBJ 14 & m_CHI_MLU
+
 ```
 
 
@@ -249,7 +255,17 @@ USING ARRANGE
 
 ```{r}
 
+#Kids producing most words (tokens) on 6th visit 
+many_six <- data_3 %>% 
+  arrange(desc(tokens_CHI)) %>% #descending order has to be specified, as ascending is baseline. 
+  filter(VISIT == 6) %>% #only dispaly visit 6. 
+  select(SUBJ, VISIT, tokens_CHI) #only keep subj, visit, tokens_chi columns.
 
+#Kids least words on 1st visit 
+few_one <- data_3 %>% 
+  arrange(tokens_CHI) %>% #we want ascending order, which is the baseline. 
+  filter(VISIT == 1) %>% #only display visit 1.
+  select(SUBJ, VISIT, tokens_CHI) #only keep subj, visit, tokens_chi columns.
 
 ```
 
@@ -259,6 +275,17 @@ USING SELECT
 2. What happens if you include the name of a variable multiple times in a select() call?
 
 ```{r}
+
+#making subset with kids w. ASD, mlu & word tokens 
+subset <- data_3 %>% 
+  filter(Diagnosis == "ASD") %>%
+  filter(!is.na(CHI_MLU)) %>%
+  filter(!is.na(tokens_CHI)) #impossibly many here, subset = 0 - smarter way w. select?
+
+#what happens if name of variable multiple times in select call
+subset2 <- data_3 %>% 
+  select()
+
 
 ```
 
@@ -270,5 +297,13 @@ USING MUTATE, SUMMARISE and PIPES
 
 ```{r}
 
+#1 but it is not very clear, what is meant. 
+data_4 <- data_3 %>%
+  mutate(mean())
+
+#2 once again, I do not understand the task. 
+data_5 <- data_4 %>% 
+  group_by(SUBJ) %>%
+  mutate(summarise()
 
 ```
