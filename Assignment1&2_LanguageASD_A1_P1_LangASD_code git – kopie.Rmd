@@ -19,14 +19,14 @@ In this first part of the assignment you will:
 
 # Language development in Autism Spectrum Disorder (ASD)
 
-Background: Autism Spectrum Disorder is often related to language impairment. However, this phenomenon has not been empirically traced in detail: i) relying on actual naturalistic language production, ii) over extended periods of time. We therefore videotaped circa 30 kids with ASD and circa 30 comparison kids (matched by linguistic performance at visit 1) for ca. 30 minutes of naturalistic interactions with a parent. We repeated the data collection 6 times per kid, with 4 months between each visit. We transcribed the data and counted: 
+Background: Autism Spectrum Disorder is often related to language impairment. However, this phenomenon has not been empirically traced in detail: i) relying on actual naturalistic language production, ii) over extended periods of time. We therefore videotaped circa 30 kids with ASD and circa 30 comparison kids (matched by linguistic performance at visit 1) for ca. 30 minutes of naturalistic interactions with a parent. We repeated the data collection 6 times per kid, with 4 months between each visit. We transcribed the data and counted:
 i) the amount of words that each kid uses in each video. Same for the parent.
 ii) the amount of unique words that each kid uses in each video. Same for the parent.
-iii) the amount of morphemes per utterance (Mean Length of Utterance) displayed by each child in each video. Same for the parent. 
+iii) the amount of morphemes per utterance (Mean Length of Utterance) displayed by each child in each video. Same for the parent.
 
 ## 1. Let's get started on GitHub
 
-Follow the link to a Github tutorial: 
+Follow the link to a Github tutorial:
 https://support.rstudio.com/hc/en-us/articles/200532077-Version-Control-with-Git-and-SVN
 
 In the assignments you will be asked to upload your code on Github and the GitHub repositories will be part of the portfolio, therefore all students must make an account and link it to their RStudio (you'll thank us later for this!).
@@ -40,7 +40,8 @@ You may also use Gitlab instead of Github (Malte will explain in class)
 If you're not in a project in Rstudio, make sure to set your working directory here.
 If you created an rstudio project, then your working directory (the directory with your data and code for these assignments) is the project directory. You can always see which working directory is used with `getwd()`. Note that this may be different in the console than in the Rmd cells (don't ask me why).
 
-```{r message=FALSE, warning=FALSE}
+```{r}
+Hello
 getwd()
 
 library(tidyverse)
@@ -69,13 +70,13 @@ So:
 
 2a. Find a way to transform variable names.
 Tip: Look into the package dplyr (part of tidyverse)
-Tip: Or google "how to rename variables in R". 
+Tip: Or google "how to rename variables in R".
 Tip: Or look through the chapter on data transformation in R for data science (http://r4ds.had.co.nz).
 
 
 ```{r}
 demo <- demo_raw %>%
-  rename(SUBJ = Child.ID, VISIT = Visit) #last argument renamed to first argument. 
+  rename(SUBJ = Child.ID, VISIT = Visit) #last argument renamed to first argument.
 ```
 
 2b. Find a way to homogeneize the way "visit" is reported. If you look into the original data sets, you will see that in the LU data and the Token data, Visits are called "visit 1"" instead of just "1"" (which is the case in the demographic data set).
@@ -83,14 +84,12 @@ Tip: There is a package called stringr, which will be very handy for manipulatin
 
 ```{r}
 lu <- lu_raw %>%
-  mutate(VISIT = as.character(VISIT), #factor --> character bc. str_extract can't extract. 
-         VISIT = str_extract(VISIT, "[0-9]"), #regex indicating that we only want digits. 
-         VISIT = as.integer(VISIT)) #as integer, as there is now only digits. 
+  mutate(VISIT = str_extract(VISIT, "[0-9]"), #regex indicating that we only want digits.
+         VISIT = as.integer(VISIT)) #as integer, as there is now only digits.
 
 
 token <- token_raw %>%
-  mutate(VISIT = as.character(VISIT), #same as above. 
-         VISIT = str_extract(VISIT, "[0-9]"),
+  mutate(VISIT = str_extract(VISIT, "[0-9]"), #same as above
          VISIT = as.integer(VISIT))
 ```
 
@@ -104,23 +103,26 @@ Tip: You will have to do identical work for both data sets, so to save time on t
 
 
 ```{r}
-#ifelse loop. First, detecting any lower case characters --> removing the last one if that is the case --> making it as.character because ifelse defaults to numeric. 
+#ifelse loop. First, detecting any lower case characters --> removing the last one if that is the case --> making it as.character because ifelse defaults to numeric.
 lu_2 <- lu %>%
+<<<<<<< HEAD
   mutate(SUBJ = ifelse(str_detect(SUBJ, "[a-z]"), str_remove(SUBJ, ".$"), as.character(SUBJ))) 
 
 token_2 <- token %>%
+=======
+>>>>>>> 553ead4348a7fa46df25bf4adc694671c619e48d
   mutate(SUBJ = ifelse(str_detect(SUBJ, "[a-z]"), str_remove(SUBJ, ".$"), as.character(SUBJ)))
 ```
 
 2d. Now that the nitty gritty details of the different data sets are fixed, we want to make a subset of each data set only containig the variables that we wish to use in the final data set.
-For this we use the tidyverse package dplyr, which contains the function select(). 
+For this we use the tidyverse package dplyr, which contains the function select().
 
 The variables we need are: Child.ID, Visit, Ethnicity, Diagnosis, Gender, Age, ADOS,  MullenRaw, ExpressiveLangRaw, MOT_MLU, MOT_LUstd, CHI_MLU, CHI_LUstd, types_MOT, types_CHI, tokens_MOT, tokens_CHI.
 
 * ADOS indicates the severity of the autistic symptoms (the higher the score, the worse the symptoms)
 * MLU stands for mean length of utterance
 * types stands for unique words (e.g. even if "doggie" is used 100 times it only counts for 1)
-* tokens stands for overall amount of words (if "doggie" is used 100 times it counts for 100) 
+* tokens stands for overall amount of words (if "doggie" is used 100 times it counts for 100)
 * MullenRaw indicates non verbal IQ
 * ExpressiveLangRaw indicates verbal IQ
 
@@ -128,13 +130,13 @@ It would be smart to rename the last two into something you can remember (i.e. n
 
 ```{r}
 int_var <- unlist(str_split("SUBJ, VISIT, Ethnicity, Diagnosis, Gender, Age, ADOS, MullenRaw, ExpressiveLangRaw, MOT_MLU, MOT_LUstd, CHI_MLU, CHI_LUstd, types_MOT, types_CHI, tokens_MOT, tokens_CHI"
-                     ,", ")) #creatign a list with all the variables we need. 
+                     ,", ")) #creatign a list with all the variables we need.
 
 #https://github.com/tidyverse/dplyr/issues/3312
 
 demo_3 <- demo %>%
   select(one_of(int_var)) %>% #selecting variables that are also in the list: one_of
-  rename(nonVerbalIQ = MullenRaw, verbalIQ = ExpressiveLangRaw) #renaming MullenRaw & ExpressiveLangRaw to nonVerbalIq & verbalIQ. 
+  rename(nonVerbalIQ = MullenRaw, verbalIQ = ExpressiveLangRaw) #renaming MullenRaw & ExpressiveLangRaw to nonVerbalIq & verbalIQ.
 
 lu_3 <- lu_2 %>%
   select(one_of(int_var))
@@ -143,7 +145,7 @@ token_3 <- token_2 %>%
   select(one_of(int_var))
 ```
 
-2e. Finally we are ready to merge all the data sets into just one. 
+2e. Finally we are ready to merge all the data sets into just one.
 Tip: Look up "joins" in R for data science, or google "How to merge datasets in R"
 Tip: Joining / merging only works for two data frames at the time.
 
@@ -153,6 +155,7 @@ data_full <- demo_3 %>% #demo has to be first because it is the biggest
   full_join(token_3, by = c("SUBJ", "VISIT")) #Left join ensures that it the incomplete rows are kept. 
 
 data <- demo_3 %>% #demo has to be first because it is the biggest
+<<<<<<< HEAD
   left_join(lu_3, by = c("SUBJ", "VISIT")) %>% #Joining SUBJ & VISIT which are common to all 
   left_join(token_3, by = c("SUBJ", "VISIT"))
 
@@ -160,6 +163,13 @@ anti <- anti_join(data, data_left)
 
 rm(list=setdiff(ls(), c("data", "data_left", "data_full"))) 
 #removing everything but the "data" from workspace. 
+=======
+  left_join(lu_3, by = c("SUBJ", "VISIT")) %>% #Joining SUBJ & VISIT which are common to all
+  left_join(token_3, by = c("SUBJ", "VISIT")) #Left join ensures that it the incomplete rows are kept.
+
+
+rm(list=setdiff(ls(), "data")) #removing everything but the "data" from workspace.
+>>>>>>> 553ead4348a7fa46df25bf4adc694671c619e48d
 # https://stackoverflow.com/questions/6190051/how-can-i-remove-all-objects-but-one-from-the-workspace-in-r
 ```
 
@@ -178,12 +188,12 @@ So let's make sure that we select only these variables as collected during the f
 
 ```{r}
 # filter way
-data_2 <- data %>% #selecting variables with many NAs 
-  select(SUBJ, VISIT, ADOS_1 = ADOS, nonVerbalIQ_1 = nonVerbalIQ, verbalIQ_1 = verbalIQ) %>% 
+data_2 <- data %>% #selecting variables with many NAs
+  select(SUBJ, VISIT, ADOS_1 = ADOS, nonVerbalIQ_1 = nonVerbalIQ, verbalIQ_1 = verbalIQ) %>%
   filter(VISIT == 1) %>% #filtering by VISIT = 1
-  right_join(data, by = c("SUBJ")) %>% #right-join bypasses new steps. 
+  right_join(data, by = c("SUBJ")) %>% #right-join bypasses new steps.
   select(-VISIT.x, -ADOS, -nonVerbalIQ, -verbalIQ) %>% #
-  select(SUBJ, VISIT = VISIT.y, Diagnosis, Age, Gender, Ethnicity, 
+  select(SUBJ, VISIT = VISIT.y, Diagnosis, Age, Gender, Ethnicity,
          ADOS_1, nonVerbalIQ_1, verbalIQ_1, MOT_MLU:tokens_CHI)
 
 # subset way
@@ -203,12 +213,12 @@ Tip: google "R how to convert character to integer" or look up the as.??? functi
 ```{r}
 data_3 <- data_2 %>%
   mutate(SUBJ = as.integer(factor(SUBJ)),
-         Gender = ifelse(Gender == 1, "F", "M"), #changes the Gender 
+         Gender = ifelse(Gender == 1, "F", "M"), #changes the Gender
          Diagnosis = ifelse(Diagnosis == "A", "ASD", "TD")) #changes diagnosis
 ```
 
 
-Write the data set into a csv file. 
+Write the data set into a csv file.
 
 ```{r}
 write.csv(data_3, "language_dev_asd_clean.csv", row.names = F)
@@ -228,18 +238,18 @@ List all kids who:
 
 ```{r}
 kid1 <- data_3 %>%
-  group_by(SUBJ) %>% 
-  summarise(m_CHI_MLU = mean(CHI_MLU)) %>% #creating a new variable. 
-  filter(m_CHI_MLU > 2.7) #filtering by specific value on this variable 
+  group_by(SUBJ) %>%
+  summarise(m_CHI_MLU = mean(CHI_MLU)) %>% #creating a new variable.
+  filter(m_CHI_MLU > 2.7) #filtering by specific value on this variable
 
 kid2 <- data_3 %>%
   filter(VISIT == 1 & CHI_MLU < 1.5) %>% #filtering by vist & mlu
   select(SUBJ, CHI_MLU)
 
 kid3 <- data_3 %>%
-  group_by(SUBJ) %>% 
-  mutate(n_visit = sum(VISIT)) %>% 
-  filter(n_visit >= 21) 
+  group_by(SUBJ) %>%
+  mutate(n_visit = sum(VISIT)) %>%
+  filter(n_visit >= 21)
 
 kid_123 <- kid1 %>%
   inner_join(kid2) %>%
@@ -280,7 +290,7 @@ mess <- data_3 %>%
 
 USING MUTATE, SUMMARISE and PIPES
 1. Add a column to the data set that represents the mean number of words spoken during all visits.
-2. Use the summarise function and pipes to add an column in the data set containing the mean amount of words produced by each trial across all visits. HINT: group by Child.ID 
+2. Use the summarise function and pipes to add an column in the data set containing the mean amount of words produced by each trial across all visits. HINT: group by Child.ID
 3. The solution to task above enables us to assess the average amount of words produced by each child. Why don't we just use these average values to describe the language production of the children? What is the advantage of keeping all the data?
 
 ```{r}
