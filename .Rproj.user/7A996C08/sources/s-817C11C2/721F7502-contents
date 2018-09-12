@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
-data <- read_csv("language_dev_asd_clean.csv")
+data_3 <- read_csv("language_dev_asd_clean.csv")
 ```
 
 # Language development in Autism Spectrum Disorder (ASD)

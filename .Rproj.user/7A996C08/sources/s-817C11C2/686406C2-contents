@@ -1,0 +1,11 @@
+asd <- data %>%
+  filter(Diagnosis == "ASD" & VISIT == 1)
+
+td <- data %>%
+  filter(Diagnosis == "TD" & VISIT == 1)
+
+median(asd$Age, na.rm = T) 
+median(td$Age, na.rm = T)
+
+hist(asd$Age)
+hist(td$Age)

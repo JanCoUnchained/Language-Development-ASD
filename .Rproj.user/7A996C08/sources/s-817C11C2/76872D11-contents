@@ -1,0 +1,14 @@
+data_inner_2 <- data_inner %>% #selecting variables with many NAs
+  select(SUBJ, VISIT, ADOS_1 = ADOS, nonVerbalIQ_1 = nonVerbalIQ, verbalIQ_1 = verbalIQ) %>%
+  filter(VISIT == 1) %>% #filtering by VISIT = 1
+  right_join(data, by = c("SUBJ")) %>% #right-join bypasses new steps.
+  select(-VISIT.x, -ADOS, -nonVerbalIQ, -verbalIQ) %>% #
+  select(SUBJ, VISIT = VISIT.y, Diagnosis, Age, Gender, Ethnicity,
+         ADOS_1, nonVerbalIQ_1, verbalIQ_1, MOT_MLU:tokens_CHI)
+
+data_inner_3 <- data_inner_2 %>%
+  mutate(SUBJ = as.integer(factor(SUBJ)),
+         Gender = ifelse(Gender == 1, "M", "F"), #changes the Gender
+         Diagnosis = ifelse(Diagnosis == "A", "ASD", "TD")) #changes diagnosis
+
+anti <- anti_join(data_inner_3, data_4) 

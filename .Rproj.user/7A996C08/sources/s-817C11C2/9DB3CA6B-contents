@@ -1,0 +1,486 @@
+---
+title: "Assignment 2"
+author: "Jan Kostkan"
+date: "2018-07-14"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+setwd("~/_DOKUMENTY/_R/180704_summer uni NOTES/assignment2")
+
+library(rvest)
+library(tidyverse)
+library(reshape2)
+#options(digits = 3)
+```
+
+In this assignment I conduct exploratory data analysis of apartments offered for rent in Aarhus and its surroundings. Data was collected from danish real estate portal lejebolig.dk on July 12th using webscraping and cosists of 1880 rows and 9 colummns. The aim of the analysis is producing advice for students or fresh graduates that are searching for apartments in the private sphere.
+
+Code used to acquire the data is included in an appendix.
+
+# EDA 
+## prep
+First we will read the data into R and make sure that variables are in the right format. Categorical variables are turned into factors and description into a string. Next, we have to get rid of duplicated records. Some properities seem to be listed more than once on lejebolig.dk and because our dataset was scraped from raw html code, these records are still present.
+
+Description text can be used to identify duplicates, since unique apartments should have unique descriptions. In some cases this approach may be insufficient (e.g. if same property was posted twice and description altered), but it proved to be the most reliable one. Description is the most variying field (many apartments can have same area / monthly rent) and including more variables in duplicated() function causes it to overlook many duplicates, that are obvious to naked eye.
+
+After that, new variables of interest are derived: monthly rent per square meter and monthly rent per room.
+
+
+```{r}
+library(tidyverse)
+scraped_en <- read.csv("scraped_en.csv")
+
+scraped_en$type <- factor(scraped_en$type)
+scraped_en$loc <- factor(scraped_en$loc)
+scraped_en$street <- factor(scraped_en$street)
+scraped_en$description <- as.character(scraped_en$description)
+
+
+eda <- scraped_en %>%
+  filter(!duplicated(description)) %>% #duplicated() function can handle strings. Rows with unique description are kept.
+  mutate(rent_sqm = rent/sqm, #new variable 1: monthly rent per square meter
+         rent_rooms = rent/rooms) #new variable 2: monthly rent per room
+```
+
+<br> 
+
+Now we can take a look at distribution of our variables. Rent and sqm look very right-skewed: a small amount of apartments are very expansive and/or very large. Similar tendency can be observed when we look at the distributions of derived variables.
+
+```{r}
+hist(eda$rent)
+hist(eda$sqm)
+hist(eda$rent_sqm)
+hist(eda$rent_rooms)
+```
+
+<br>
+
+When it comes to categorical variables, we have 54 locations (loc), 10 apartment types (type) and 3 contract lengths (avail) to work with. Most of the properties are in districts of Aarhus and some are in the close-by cities. Furthermore, most properties are apartments, followed by single rooms and houses. There are special categories for youth/senior housing and for properties optimized for handicaped people.
+
+```{r}
+table(eda$loc)
+table(eda$type)
+table(eda$avail)
+```
+
+<br>
+
+Number of rooms should probably be considered a categorical variable, as 94% of offered properities have less than 5 rooms.
+
+```{r}
+pie(table(eda$rooms), radius = 1)
+table(eda$rooms) #number of apartments 
+
+eda %>%
+  filter(rooms < 5) %>% #keep rows, where number of rooms less than 5
+  count()/nrow(eda) #properities with less than 5 rooms devided by number of all properities
+```
+
+<br>
+
+Now let us look into missing values in our dataset. Function summary() uncoveres, that we have one missing value in row 760 of sqm field (and therefore also in rent_sqm). After reading the description of that property we can however fill in the missing value, since it is stated there.
+
+```{r}
+# MISSING VALUES?
+summary(eda)
+which(is.na(eda$sqm))
+
+eda[760, 6] <- 10 #filling sqm in
+eda[760, 10] <- eda[760,2]/10 #filling rent_sqm in
+```
+
+<br> 
+
+For outlier detection, we will first look at scatterplots. Plotting sqm and rent uncoveres a striking outlier (property of around 700 sqm and 50k in rent) that makes other points look overly clustered. Such massive property can be excluded from our analysis, as we are aiming to produce advice to students. After that, we can see three overlaping clusters:
+-small and cheap properities in left bottom corner
+-expansive medium size properities: largest cluster around 80 sqm over 10k in rent
+-cheaper medium size properities: under expansive ones, areas around 80 sqm and 5k in rent 
+
+```{r}
+ggplot(eda, aes(sqm, rent)) +
+  geom_point() +
+  labs(title = "all properities")
+
+eda %>%
+  filter(sqm < 300) %>%
+  ggplot(aes(sqm, rent)) +
+    geom_point() +
+    labs(title = "properities smaller than 300 sq m")
+```
+
+<br>
+
+Nevertheless, we seem to have quite a few outliers. We'll use the IQR method for detecting outliers; each continuous variable will get a second column with 1 in case that the value is over/under outlier threshold and 0 in case it is within limits.
+
+```{r}
+eda_outliers <- eda %>%
+  mutate(outlier_rent = case_when(rent > (1.5*IQR(eda$rent)+11604) ~ 1,
+                             rent < (6993 - 1.5*IQR(eda$rent)) ~ 1,
+                             TRUE ~ 0),
+         outlier_sqm = case_when(sqm > (1.5*IQR(eda$sqm)+105) ~ 1,
+                             sqm < (65 - 1.5*IQR(eda$sqm)) ~ 1,
+                             TRUE ~ 0),
+         outlier_rent_sqm = case_when(rent_sqm > (1.5*IQR(eda$rent_sqm)+141.06) ~ 1,
+                             rent_sqm < (88.21 - 1.5*IQR(eda$rent_sqm)) ~ 1,
+                             TRUE ~ 0),
+         outlier_rent_room = case_when(rent_rooms > (1.5*IQR(eda$rent_rooms)+4206.2) ~ 1,
+                             rent_rooms < (2599.6 - 1.5*IQR(eda$rent_rooms)) ~ 1,
+                             TRUE ~ 0))
+```
+
+<br>
+
+Now we can look at plotted outliers. Outliers in case of rent and sqm are rather intuituve: solitary points representing properities that are either expansive (cca >20k) or large (cca >160 sqm). We have a total of 12 rent outliers and 17 sqm outliers; some points are outliers in both fields. Interestingly, there seem to be no lower outliers (very small or cheap). It might be a good idea to exclude ourliers of rent, because our target group probably cannot afford them anyway. We loose 12 datapoints as a result of this.
+
+```{r}
+eda_outliers %>%
+  mutate(outlier = factor(ifelse(outlier_rent == 1 | outlier_sqm == 1, 1, 0))) %>%
+  filter(sqm < 300) %>%
+  ggplot(aes(sqm, rent)) +
+    geom_point(aes(color = outlier)) +
+    labs(title = "IQR outliers of rent and sqm", subtitle = "properities < 300 sqm")
+
+
+eda_cut <- eda_outliers %>%
+  filter(sqm < 300) %>%
+  filter(rent < 1.5*IQR(eda$rent)+11604)
+```
+
+<br>
+Derived variables (rent per sqm and rent per room) tell a different story. We have an outlier cluster in bottom left corner, composed mostly of single rooms in downtown Aarhus, that have a low absolute rent, but very high rent per sqm. Other outliers seem to be mostly expansive mid-size properities that overlap with the main cluster. Because of this and because we are looking for cheap apartments, no points should be excluded for being outliers of our derived variables.
+
+```{r}
+eda_cut %>%
+  mutate(outlier = factor(ifelse(outlier_rent_sqm == 1 | outlier_rent_room == 1, 1, 0))) %>%
+  filter(sqm < 300) %>%
+  ggplot(aes(sqm, rent)) +
+    geom_point(aes(color = outlier)) +
+    labs(title = "IQR outliers of rent per sqm and rent per room", 
+         subtitle = "sqm < 300 & rent < 19 100")
+```
+
+<br>
+Next on the list are transformations and correlated variables. Since all of our continuous variables are right-skewed, it might be a good idea to apply log() transformation. After that will be checking for correlated predictors.
+
+Plots displayed show correlation coefficients (wider circle and fuller collor = high coefficient) of pairs of variables. X marks non-significant correlations (p > 0.05).
+
+Non-transformed correlation plot shows a strong correlation between sqm and rent (r = 0.72), medium correlation between rent and rent_rooms (r = 0.41), aswell as between rent_rooms and rent_sqm (r = 0.41), negative correlation between sqm and rent_sqm (r = -0.48) and some other weaker correlations. It makes sense that variables that are derived from each other would correlate. A more importnat finding is that sqm and rent strongly correlate; This means that a linear model of rent and sqm will probably be significant.
+
+```{r message=FALSE, warning=FALSE}
+#we'll need some more packages
+library(Hmisc)
+library(corrplot)
+```
+
+```{r}
+eda_cor <- eda %>%
+  select(rent, sqm, rent_sqm, rent_rooms)
+
+# correlation matrix of non-transformed variables
+cor_basic <- rcorr(as.matrix(eda_cor))
+
+
+cor_basic_pl <- cor(eda_cor)
+corrplot(cor_basic_pl, type = "upper", order = "hclust", 
+         p.mat = cor_basic$P, sig.level = 0.05, 
+         tl.col = "black", tl.srt = 45)
+
+cor_basic$r
+```
+<br>
+
+Let's try to redo the correlation matrix with transformed variables. In this setting, log(sqm) and log(rent) are perfectly correlated (r = 1), while correlation between sqm and rent_sqm looses its significance. It seems that the relationship between total area and monthly rent is very linear and thus further analysis of this relationship won't uncover much new.
+
+```{r}
+# log() transformation
+eda_tran <- eda_cut %>%
+  mutate(rent_log = log(rent),
+         sqm_log = log(rent),
+         rent_sqm_log = log(rent_sqm),
+         rent_rooms_log = log(rent_rooms)) %>%
+  select(rent_log, sqm_log, rent_sqm_log, rent_rooms_log)
+
+
+# correlation matrix of log() transformed variables
+cor_tran <- rcorr(as.matrix(eda_tran))
+cor_tran_pl <- cor(eda_tran)
+corrplot(cor_tran_pl, type = "upper", order = "hclust", p.mat = cor_tran$P, sig.level = 0.05,
+         tl.col = "black", tl.srt = 45)
+
+cor_tran$r
+```
+<br>
+
+What we can do, however is look into relationships such us price per square meter and total area / total rent. They are not as correlated and could prove to be insigthful.
+
+Let's say we want to get "more music for less money" and find out how which apartments usually have the cheapest price per square meter. From following plots, it seems that price per square meter gets quite a bit cheaper, if property is larger than 50 square meters. Similar tendency can be seen in the second plot: very cheap apartments tend to have a high per square meter price.
+
+```{r}
+eda_cut %>%
+  ggplot(aes(sqm, rent_sqm)) +
+    geom_point(alpha = 0.1) +
+    geom_smooth() +
+    labs(x = "total property size", y = "price per square meter")
+
+eda_cut %>%
+  ggplot(aes(rent, rent_sqm)) +
+    geom_point(alpha = 0.1) +
+    geom_smooth() +
+    labs(x = "total monthly rent", y = "price per square meter")
+```
+
+<br> 
+
+Relationship between rent and price per square meter becomes more apparent, if we get rid of outliers. It seems that apartments that cost around 5000 DKK a month have the lowest price per square meter. This analysis is however not sufficient to draw such conclusion. We could gain more confidence by binning rent variable into several categories and compare them. Due to length restriction of this assignment and my uncertainity about how to reliably devide rent into categories, we will not further explore this question.
+
+```{r}
+eda_cut %>%
+  ggplot(aes(rent, rent_sqm)) +
+    geom_point(alpha = 0.1) +
+    geom_smooth() +
+    ylim(0, (1.5*IQR(eda$rent_sqm)+141.06)) +
+    labs(x = "total monthly rent", y = "price per square meter", 
+         subtitle = "price per square meter < 220")
+```
+ 
+<br>
+
+Now let's look at locations. First, we should bring some order to the variable.
+
+Wikipedia entry on Aarhus Municipality states following:
+"The urban area of Aarhus and the immediate suburbs are divided into the districts Aarhus C, Aarhus N, Aarhus V, Viby J, Hojbjerg and Brabrand."
+(https://en.wikipedia.org/wiki/Aarhus_Municipality)
+
+Mentioned district are the ones we will categorize as Aarhus. Abyhoj will also be included, since it is formally a part of Aarhus V 
+(https://en.wikipedia.org/wiki/Aabyh%C3%B8j)
+
+Now we will make a variable that constitutes whether a property is in Aarhus, or outside.
+
+```{r}
+aarhus_dist <- c("Aarhus C", "Aarhus N", "Aarhus V", "Abyhoj", "Brabrand", "Hojbjerg", "Viby J", "Risskov")
+
+eda_aar <- eda_cut %>%
+  mutate(city = ifelse(loc %in% aarhus_dist, "Aarhus", "Outside")) %>%
+  mutate(loc = case_when(loc == "Abyhoj" ~ "Aarhus V", 
+                         TRUE ~ as.character(loc)),
+         loc = factor(loc))
+```
+
+<br>
+
+Let's compare average rent across Aarhus' neighborhoods. Aarhus C seems to have a very small error, probably because we have most observations from that part. Price also seems to be stable and relatively low in Risskov, which also has 97 properities to offer. Brabrand only has 5, which makes it not as recommendable. Third cheapest district, Aarhus V has the highest median price per square meter and is therefore also not as recommendable. Moreover, price varies quite a lot in Viby J and Aarhus N, probably because of relatively low number of properties. Most properities are available in Aarhus C.
+
+```{r}
+reor_rent <- eda_aar %>%
+  filter(city == "Aarhus") %>%
+  group_by(loc) %>%
+  summarise(mean_rent_sqm = mean(rent_sqm, na.rm = T),
+            med_rent_sqm = median(rent_sqm, na.rm = T),
+            n = n(),
+            error = 1.96*(sd(rent_sqm)/sqrt(n)))
+
+reor_rent$loc <- fct_reorder(reor_rent$loc, reor_rent$mean_rent_sqm)
+
+knitr::kable(reor_rent)
+```
+
+<br>
+Based on this table and following barchart, two district stand out:
+-Aarhus C: high number of available apartments, relatively stable prices.
+-Risskov: high number of available apartments, relatively low prices
+
+```{r}
+library(ggthemes)
+reor_rent %>%
+  ggplot(aes(fct_rev(loc), mean_rent_sqm, fill = loc)) +
+    geom_bar(stat = "summary") +
+    geom_errorbar(ymin = reor_rent$mean_rent_sqm-reor_rent$error, 
+                  ymax = reor_rent$mean_rent_sqm+reor_rent$error) +
+    scale_fill_economist() +
+    ylim(0, 200) +
+    labs(title = "Mean monthly rent per square meter", subtitle = "with 95% confidence intervals",
+         x = "neighborhood", y = "rent per square meter (in DKK)") +
+    guides(fill=FALSE)
+```
+
+<br>
+
+What is the difference between property types? Following scatterplot gives us some intuitive insight. Single rooms are smallest and cheapest (absolute rent), houses tend to have larger area and apartments are everywhere between.
+
+```{r}
+eda_aar %>%
+  ggplot(aes(sqm, rent)) +
+    geom_point(aes(color = type))
+```
+<br>
+
+Renting a single room does not seem to be advicable, since they have the highest price per square meters of any category.
+
+```{r}
+eda_aar %>%
+  ggplot(aes(type, rent_sqm)) +
+    geom_boxplot() +
+    theme(axis.text.x=element_text(angle = 90,vjust = 0))
+```
+
+<br>
+The last question I will address now is the difference between Aarhus and neighboring cities in rent and apartment size. Properties in Aarhus seem to be mostly smaller and more expansive, than outside of it.
+
+```{r}
+eda_aar %>%
+  ggplot(aes(sqm, rent)) +
+    geom_point(aes(color = city))
+```
+
+<br>
+
+To summarise, if one has a budget around 10,000 DKK a month, I would recommend looking for an apartment larger than 50 square meters in Aarhus C, or Risskov for the lowest price per square meter.
+
+Following is the code used for getting the data from lejebolig.dk
+
+
+## APPENDIX
+### webscraping
+<br>
+```{r eval=FALSE, include=TRUE}
+library(rvest)
+library(tidyverse)
+
+# source code manually downloaded. Original page does not show a complete offer list, therefore I scrolled down to the bottom of the page in order to load all listed offeres and then saved source code of this website.
+html_link <- read_html("lejeboglig_greater_aarhus_180712.html")
+
+link_list <- html_link %>%
+  html_nodes("a") %>%
+  html_attr("href")
+
+link_list_chr <- unlist(link_list)
+
+### cleaning list of url links
+link_list_df <- as.data.frame(link_list_chr) %>%
+  filter(!str_detect(link_list_chr, "google") & 
+           !str_detect(link_list_chr, "Hunter") &
+           !str_detect(link_list_chr, "min-konto") &
+           !str_detect(link_list_chr, "Scripts") &
+           !str_detect(link_list_chr, "scripts") &
+           !str_detect(link_list_chr, "Content") &
+           !str_detect(link_list_chr, "content") &
+           !str_detect(link_list_chr, "facebook") &
+           !str_detect(link_list_chr, "artikler") &
+           !str_detect(link_list_chr, "/lejebolig/aarhus")
+  )
+
+View(link_list_df)
+
+clean_link_list <- as.character(link_list_df[17:1896,1])
+
+
+
+### gathering loop for rent, contract length, type, location, area, rooms
+lst_loop  <- lapply(clean_link_list, FUN=function(URLLink){
+  PlayerScrape <- read_html(URLLink)
+  
+  res.txt <- PlayerScrape %>% 
+    html_nodes(".col-xs-4") %>%
+    html_text()
+  
+  res.df <- as.data.frame(res.txt)
+  res.df <- t(res.df)
+  
+  res.df <- res.df %>%
+    str_replace_all(pattern = "\n", replacement = " ") %>% 
+    str_replace_all(pattern = "\r", replacement = " ") %>%
+    str_replace_all(pattern = "\t", replacement = " ") %>%
+    str_trim(side = "both")
+  
+  res.df <- as.data.frame(t(res.df))
+})
+
+df_loop <- do.call(rbind, lst_loop) 
+
+
+### gathering loop for street name and description
+lst_loop3  <- lapply(clean_link_list, FUN=function(URLLink){
+  PlayerScrape <- read_html(URLLink)
+  
+  res.txt <- PlayerScrape %>% 
+    html_nodes("p") %>%
+    html_text()
+  
+  res.df <- as.data.frame(res.txt)
+  
+  res.df <- t(res.df)
+  
+  res.df <- res.df %>%
+    str_replace_all(pattern = "\n", replacement = " ") %>% 
+    str_replace_all(pattern = "\r", replacement = " ") %>%
+    str_replace_all(pattern = "\t", replacement = " ") %>%
+    str_trim(side = "both")
+  
+  res.df <- as.data.frame(t(res.df))
+  
+})
+
+df_loop3 <- do.call(bind_rows, lst_loop3) 
+```
+
+### df_loop1 prep
+```{r eval=FALSE, include=TRUE}
+names(df_loop) <- c("X", "rent", "avail", "type", "loc", "sqm", "rooms")
+df_loop <- data.frame(lapply(df_loop, as.character), stringsAsFactors=FALSE)
+
+
+### CLEAN UP
+byty_df <- df_loop %>%
+  mutate(
+    #rent
+    rent = str_replace_all(rent, pattern = " kr/md", replacement = ""),
+    rent = str_replace_all(rent, pattern = "[[:punct:]]", replacement = ""),
+    rent = as.numeric(rent),
+    #sqm
+    sqm = iconv(sqm, to = "ASCII//TRANSLIT"),
+    sqm = str_replace_all(sqm, pattern = " m2", replacement = ""),
+    sqm = as.numeric(sqm),
+    #rooms
+    rooms = iconv(rooms, to = "ASCII//TRANSLIT"),
+    rooms = str_replace_all(rooms, pattern = " varelser", replacement = ""),
+    rooms = as.numeric(rooms),
+    #type
+    type = str_replace_all(type, " ", "")
+    )
+```
+
+### df_loop3 prep
+```{r eval=FALSE, include=TRUE}
+appartment_description <- df_loop3 %>%
+  select(description = V1)
+
+street <-  appartment_description %>%
+  separate(description, into = c("type2", "street") ,sep = ", ")
+
+scraped <- cbind(byty_df, street, appartment_description) %>%
+  select(-type2)
+```
+
+### translating variables
+```{r eval=FALSE, include=TRUE}
+scraped_en <- scraped %>%
+  mutate(
+    avail = case_when(avail == "1 ar og mere" ~ "Over 1 year",
+                      avail == "Ubegranset" ~ "Indefinite",
+                      avail == "Under 1 ar" ~ "Under 1 year"),
+    
+    type = case_when(type == "Delebolig" ~ "Collective",
+                     type == "Hus/villa" ~ "House",
+                     type == "Hus/villaHandicap" ~ "House (handicaped)",
+                     type == "Hus/villaUngdomsbolig" ~ "House (youth housing)",
+                     type == "Lejlighed" ~ "Apartment",
+                     type == "LejlighedAldrebolig" ~ "Apartment (senior housing)",
+                     type == "LejlighedHandicap" ~ "Apartment (handicaped)",
+                     type == "LejlighedUngdomsbolig" ~ "Apartment (youth)",
+                     type == "Varelse" ~ "Room",
+                     type == "VarelseUngdomsbolig" ~ "Room (youth housing)")
+  )
+```
