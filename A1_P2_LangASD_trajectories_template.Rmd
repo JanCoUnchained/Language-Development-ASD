@@ -81,6 +81,8 @@ data %>% group_by(data$Diagnosis) %>% table(data$Gender)
 data <- data[rowSums(is.na(data[ , 8:17])) < 10, ]
 
 
+data[rowSums(is.na(data1[ , 8:17])) > 10, ]
+
 data %>% group_by(Diagnosis) %>% summarise(ADOS_1) 
 summarise(data$TD
 ```
