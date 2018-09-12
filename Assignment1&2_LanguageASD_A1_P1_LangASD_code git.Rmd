@@ -107,6 +107,9 @@ Tip: You will have to do identical work for both data sets, so to save time on t
 #ifelse loop. First, detecting any lower case characters --> removing the last one if that is the case --> making it as.character because ifelse defaults to numeric. 
 lu_2 <- lu %>%
   mutate(SUBJ = ifelse(str_detect(SUBJ, "[a-z]"), str_remove(SUBJ, ".$"), as.character(SUBJ))) 
+
+token_2 <- token %>%
+  mutate(SUBJ = ifelse(str_detect(SUBJ, "[a-z]"), str_remove(SUBJ, ".$"), as.character(SUBJ)))
 ```
 
 2d. Now that the nitty gritty details of the different data sets are fixed, we want to make a subset of each data set only containig the variables that we wish to use in the final data set.
@@ -136,7 +139,7 @@ demo_3 <- demo %>%
 lu_3 <- lu_2 %>%
   select(one_of(int_var))
 
-token_3 <- token %>%
+token_3 <- token_2 %>%
   select(one_of(int_var))
 ```
 
@@ -145,12 +148,18 @@ Tip: Look up "joins" in R for data science, or google "How to merge datasets in 
 Tip: Joining / merging only works for two data frames at the time.
 
 ```{r}
+data_full <- demo_3 %>% #demo has to be first because it is the biggest
+  full_join(lu_3, by = c("SUBJ", "VISIT")) %>% #Joining SUBJ & VISIT which are common to all 
+  full_join(token_3, by = c("SUBJ", "VISIT")) #Left join ensures that it the incomplete rows are kept. 
+
 data <- demo_3 %>% #demo has to be first because it is the biggest
   left_join(lu_3, by = c("SUBJ", "VISIT")) %>% #Joining SUBJ & VISIT which are common to all 
-  left_join(token_3, by = c("SUBJ", "VISIT")) #Left join ensures that it the incomplete rows are kept. 
-  
+  left_join(token_3, by = c("SUBJ", "VISIT"))
 
-rm(list=setdiff(ls(), "data")) #removing everything but the "data" from workspace. 
+anti <- anti_join(data, data_left)
+
+rm(list=setdiff(ls(), c("data", "data_left", "data_full"))) 
+#removing everything but the "data" from workspace. 
 # https://stackoverflow.com/questions/6190051/how-can-i-remove-all-objects-but-one-from-the-workspace-in-r
 ```
 
