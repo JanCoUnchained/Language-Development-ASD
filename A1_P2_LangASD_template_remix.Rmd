@@ -75,7 +75,7 @@ data$SUBJ <- as.factor(data$SUBJ)
 data$VISIT <- as.factor(data$VISIT)
 
 #deleting records that are obviously fucked. 
-
+data <- data[rowSums(is.na(data[ , 8:17])) < 10,] #2 observations bitch without any linguistic inf.
 
 #well matched? 
 summary(data$Diagnosis) #numerically, yes. (ASD: 176, TD: 196)
@@ -155,26 +155,28 @@ ggplot(data, aes(as.numeric(VISIT), CHI_MLU)) +
 ggplot(data, aes(Diagnosis, CHI_MLU))+
   geom_boxplot() #outliers in ASD. 
 
-
-
 #linear mixed effects model 
 library(lme4)
 
 model_data <- data %>%
   filter(!is.na(CHI_MLU) & !is.na(VISIT) & !is.na(Diagnosis))
 
-mixed_model <- lmer(CHI_MLU ~ VISIT + Diagnosis + (1*VISIT|SUBJ), data = model_data, REML=FALSE)
-mixed_model
+#is diagnosis a significant predictor of MLU? - no
+mixed_model <- lmer(CHI_MLU ~ VISIT + Diagnosis + (1+VISIT|SUBJ), data = model_data, REML=FALSE)
+model_simple <- lmer(CHI_MLU ~ VISIT + (1+VISIT|SUBJ), model_data, REML=FALSE)
+anova(model_simple, mixed_model) #not significantly different with diagnosis
 
-model_simple <- lm(CHI_MLU ~ VISIT + Diagnosis, model_data)
-summary(model)
-
+#is visit a significant predictor of MLU? - yes
+model_simple <- lmer(CHI_MLU ~ Diagnosis + (1+VISIT|SUBJ), data = model_data, REML=FALSE)
+anova(model_simple, mixed_model) #very significant. 
 
 ```
 
 How would you evaluate whether the model is a good model?
 
 ```{r ex2 evaluate, include = FALSE}
+
+
 
 ```
 
