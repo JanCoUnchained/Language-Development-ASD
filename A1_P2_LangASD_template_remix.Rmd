@@ -199,9 +199,9 @@ ggplot(data, aes(as.numeric(VISIT), CHI_MLU, color = Diagnosis)) +
   stat_smooth(method = "lm", formula = y ~ poly(x, 3))
 
 #different models 
-linear_model <- lmer(CHI_MLU ~ VISIT + Diagnosis + (1+VISIT|SUBJ), data = model_data, REML=FALSE)
-quadratic_model <- something
-cubic_model <- something
+m_linear <- lmer(CHI_MLU ~ VISIT + Diagnosis + (1+VISIT|SUBJ), data = model_data, REML=FALSE)
+m_quadratic <- lmer(CHI_MLU ~ VISIT + Diagnosis + (1+VISIT|SUBJ), data = model_data, REML=FALSE)
+m_cubic <- lmer(CHI_MLU ~ VISIT + Diagnosis + (1+VISIT|SUBJ), data = model_data, REML=FALSE)
 
 ```
 
