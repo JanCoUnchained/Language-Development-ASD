@@ -1,0 +1,439 @@
+---
+title: "apparment_finder"
+author: "JK"
+date: "28 dubna 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(rvest)
+library(RSelenium)
+library(pastecs)
+library(ggthemes)
+
+options(digits = 3)
+
+setwd("~/_DOKUMENTY/_R/180428_apparment scraper")
+```
+
+**TODO:**
+part 3:
+  -UNIQUE ADS (first 43 characters are always different, however names of ads are sometimes same)
+
+
+#PART 1: nefunkcni picovny
+
+
+## fantom picovina z internetu vole (nefunguje)
+https://stackoverflow.com/questions/31054826/rvest-output-returning-character0-instead-of-the-column-highlighted-with-sel
+
+```{r}
+pJS <- phantom()
+remDr <- remoteDriver(browserName = "phantomjs")
+remDr$open(silent = FALSE)
+remDr$navigate("https://www.boligportal.dk/lejebolig/dp/1-vaerelses-lejlighed-aarhus-c/id-5589285")
+
+test.html <- read_html(remDr$getPageSource()[[1]]) 
+test.text<-test.html%>%
+  html_nodes(".AdDetail__sidebar-price-num , .AdDetail__header-heading-primary")%>%
+  html_text()
+test.df<-data.frame(matrix(test.text,ncol=2,byrow=TRUE))
+names(test.df)<-c("price","title")
+remDr$close()
+pJS$stop()
+
+```
+
+
+## rvest bogligportal.dk
+```{r}
+sample_byt <- read_html("https://www.boligportal.dk/lejebolig/dp/1-vaerelses-lejlighed-aarhus-c/id-5589285")
+
+pica <- sample_byt %>%
+  html_nodes(".AdDetail__sidebar-price-num") #%>%
+  #html_text()
+```
+
+## rvest HN
+```{r}
+sample_hn <- read_html("https://domaci.ihned.cz/c1-66124200-o-ucasti-ve-vlade-s-ano-za-podpory-komunistu-rozhodne-referendum-clenu-cssd-hlasovat-jich-musi-alespon-ctvrtina?utm_source=ihned&utm_medium=otvirak&utm_content=id-66124200")
+
+kurva <- sample_hn %>%
+  html_nodes(".author , .article-title") %>%
+  html_text()
+```
+
+  #
+#PART 2: lejeboglig.dk
+
+## rvest lejeboglig.dk
+```{r}
+sample_leje <- read_html("https://www.lejebolig.dk/lejebolig/1468663/lejlighed-til-9200-kr")
+sample_leje_2 <- read_html("https://www.lejebolig.dk/lejebolig/1468760/fremleje-af-moebleret-vaerelse-i-latinerkvarteret")
+
+
+hovno <- sample_leje %>%
+  html_nodes("li") %>%
+  html_text()
+
+hovno[35]
+
+```
+
+## lejeboglig.dk cleanup
+```{r}
+hovno2 <- sample_leje %>%
+  html_nodes("#container :nth-child(1)") %>%
+  html_text() %>%
+  
+  str_replace_all(pattern = "\n", replacement = " ") %>% 
+  str_replace_all(pattern = "\r", replacement = " ") %>%
+  str_replace_all(pattern = "\t", replacement = " ") %>%
+  str_replace_all(pattern = "[\\^]", replacement = " ") %>%
+  str_replace_all(pattern = "\"", replacement = " ") %>%
+  str_replace_all(pattern = "\\s+", replacement = " ") %>%
+  str_trim(side = "both")
+ 
+hovno2 
+
+df.s1 <- as.data.frame(hovno2) %>%
+  filter(str_detect(hovno2, "/md")) %>%
+  slice(1)
+```
+
+```{r}
+hovno3 <- sample_leje_2 %>%
+  html_nodes("#container :nth-child(1)") %>%
+  html_text() %>%
+  
+  str_replace_all(pattern = "\n", replacement = " ") %>% 
+  str_replace_all(pattern = "\r", replacement = " ") %>%
+  str_replace_all(pattern = "\t", replacement = " ") %>%
+  str_replace_all(pattern = "[\\^]", replacement = " ") %>%
+  str_replace_all(pattern = "\"", replacement = " ") %>%
+  str_replace_all(pattern = "\\s+", replacement = " ") %>%
+  str_trim(side = "both")
+
+hovno3
+
+df.s2 <- as.data.frame(hovno3) %>%
+  filter(str_detect(hovno3, "/md")) %>%
+  slice(1)
+```
+
+```{r}
+sample_leje_3 <- read_html("https://www.lejebolig.dk/lejebolig/1370616/3-vaerelses-lejlighed-paa-93-m2")
+
+hovno4 <- sample_leje_3 %>%
+  html_nodes("li") %>%
+  html_text() %>%
+  
+  str_replace_all(pattern = "\n", replacement = " ") %>% 
+  str_replace_all(pattern = "\r", replacement = " ") %>%
+  str_replace_all(pattern = "\t", replacement = " ") %>%
+  str_replace_all(pattern = "[\\^]", replacement = " ") %>%
+  str_replace_all(pattern = "\"", replacement = " ") %>%
+  str_replace_all(pattern = "\\s+", replacement = " ") %>%
+  str_trim(side = "both")
+
+df.s3 <- as.data.frame(hovno4) %>%
+  filter(str_detect(hovno4, "/md")) %>%
+  slice(1) %>%
+  
+  separate(hovno4, c("price","length","type","city","dist","sq m","m2","nr_room","var"), sep = " ")
+```
+
+
+## dataframe s udaji
+
+### df.s3.2
+```{r}
+hovno5 <- sample_leje_3 %>%
+  html_nodes("li") %>%
+  html_text()
+
+df.s3.2 <- as.data.frame(hovno5) %>%
+  filter(str_detect(hovno5, "\r\n            \r\n            \r\n            "))
+
+df.s3.2 <- t(df.s3.2)
+
+df.s3.2 <- df.s3.2 %>%
+  str_replace_all(pattern = "\n", replacement = " ") %>% 
+  str_replace_all(pattern = "\r", replacement = " ") %>%
+  str_replace_all(pattern = "\t", replacement = " ") %>%
+  str_trim(side = "both")
+
+df.s3.2 <- as.data.frame(t(df.s3.2))
+```
+
+### df.s2.2
+```{r}
+hovno6 <- sample_leje_2 %>%
+  html_nodes("li") %>%
+  html_text()
+
+df.s2.2 <- as.data.frame(hovno6) %>%
+  filter(str_detect(hovno6, "\r\n            \r\n            \r\n            "))
+
+df.s2.2 <- t(df.s2.2)
+
+df.s2.2 <- df.s2.2 %>%
+  str_replace_all(pattern = "\n", replacement = " ") %>% 
+  str_replace_all(pattern = "\r", replacement = " ") %>%
+  str_replace_all(pattern = "\t", replacement = " ") %>%
+  str_trim(side = "both")
+
+df.s2.2 <- as.data.frame(t(df.s2.2))
+```
+
+### spojeni df.s3.2 & df.s2.2 
+```{r}
+dva_byty <- rbind(df.s3.2, df.s2.2)
+```
+
+
+
+
+
+#PART 3: GETTING LINKS
+
+## getting links: pokus prvni
+```{r}
+html_hledani <- read_html("https://www.lejebolig.dk/lejebolig/aarhus")
+
+res1 <- html_hledani %>%
+  html_nodes("#results") %>%
+  lapply(html_nodes, "a") %>%
+  lapply(html_attr, "href")
+
+res1
+
+r <- unlist(res1)
+
+res2 <- as.data.frame(r) %>%
+  filter(!str_detect(r, "http:") & 
+           !str_detect(r, "Hunter") &
+           !str_detect(r, "min-konto"))
+
+View(res2)
+```
+Funkcni, ale ne vsechny linky (cil = 300+, realita = 20)
+Stranka je rolovaci: source code se nacte po scrollu dolu
+
+
+## optimalizace
+bypass rolling -> download source code -> 341 links
+```{r}
+html_zkompu <- read_html("lejeboglig_aarhus_180429.html")
+
+res_komp <- html_zkompu %>%
+  html_nodes("a") %>%
+  html_attr("href")
+
+res_komp
+
+res_komp_chr <- unlist(res_komp)
+
+res_komp_df <- as.data.frame(res_komp_chr) %>%
+  filter(!str_detect(res_komp_chr, "google") & 
+           !str_detect(res_komp_chr, "Hunter") &
+           !str_detect(res_komp_chr, "min-konto") &
+           !str_detect(res_komp_chr, "Scripts") &
+           !str_detect(res_komp_chr, "scripts") &
+           !str_detect(res_komp_chr, "Content") &
+           !str_detect(res_komp_chr, "content") &
+           !str_detect(res_komp_chr, "facebook") &
+           !str_detect(res_komp_chr, "artikler") &
+           !str_detect(res_komp_chr, "/lejebolig/aarhus")
+         )
+
+View(res_komp_df)
+
+# OPTION 1: OUTPUT DATAFRAME
+clean_komp_df <- as.data.frame(res_komp_df[5:345,1])
+names(clean_komp_df) <- "link"
+clean_komp_df$link <- as.character(clean_komp_df$link)
+
+
+# OPTION 2: OUTPUT LIST
+clean_komp_list <- as.character(res_komp_df[5:345,1])
+```
+
+
+
+
+#PART 4: ACTUALLY LOOPing
+
+## Pokus 1:
+vysledek <- read_html(list())
+```{r}
+
+lst_loop  <- lapply(clean_komp_list, FUN=function(URLLink){
+  PlayerScrape <- read_html(URLLink)
+
+  res.txt <- PlayerScrape %>% 
+    html_nodes("li") %>%
+    html_text()
+
+  res.df <- as.data.frame(res.txt) %>%
+    filter(str_detect(res.txt, "\r\n            \r\n            \r\n            "))
+  
+  res.df <- t(res.df)
+  
+  res.df <- res.df %>%
+    str_replace_all(pattern = "\n", replacement = " ") %>% 
+    str_replace_all(pattern = "\r", replacement = " ") %>%
+    str_replace_all(pattern = "\t", replacement = " ") %>%
+    str_trim(side = "both") #%>%
+    #mutate(url = URLLink)
+
+  res.df <- as.data.frame(t(res.df))
+  #Checker = data.frame(Name, Club, Nationality, Position, Height, SquadNo, Value, DOB, Age, Apps, Minutes, Goals, Assists, PlayerURLLink)
+
+})
+
+df_loop <- do.call(rbind, lst_loop) 
+```
+bomba, vse funguje!
+
+
+
+#PART 5: ANALYSIS
+## CLEANUP
+```{r}
+# df_loop manipulation
+names(df_loop) <- c("rent", "avail", "type", "loc", "sqm", "rooms")
+df_loop <- data.frame(lapply(df_loop, as.character), stringsAsFactors=FALSE)
+write_csv(df_loop, "byty_180429.csv")
+
+# cleanup itself
+byty_df <- df_loop %>%
+  mutate(
+    #rent
+    rent = str_replace_all(rent, pattern = "/md", replacement = ""),
+    rent = str_replace_all(rent, pattern = "[[:punct:]]", replacement = ""),
+    rent = as.numeric(rent),
+    #sqm
+    sqm = iconv(sqm, to = "ASCII//TRANSLIT"),
+    sqm = str_replace_all(sqm, pattern = " mA\\?", replacement = ""),
+    sqm = as.numeric(sqm),
+    #rooms
+    rooms = iconv(rooms, to = "ASCII//TRANSLIT"),
+    rooms = str_replace_all(rooms, pattern = " vA\\|relser", replacement = ""),
+    rooms = as.numeric(rooms))
+
+  
+```
+
+## EXPLORATORY
+### n_plot & n_desc & n_trans
+```{r}
+n_plot <- function(data, x) {
+  ggplot(data, aes_string(x = x)) +
+    geom_histogram(aes(y = ..density..), colour = "Black", fill = "ivory1") +
+    stat_function(fun = dnorm, args = list(mean = mean(x), sd = sd(x)), color = "red3", size = 1)
+} #histogram w. overlayed normal distribution.
+
+# descriptive statistics
+n_desc <- function(x) {
+  st <- round(stat.desc(x, basic = FALSE, norm = TRUE), 3)
+  return(st)
+}
+
+n_tran <- function(data, x) {
+  trans_df <- data %>%
+    mutate(logx = log(x), sqrtx = sqrt(x), devx = (1 / x))
+}
+```
+
+### prumerna cena za metr a pokoj
+```{r}
+e1 <- byty_df %>%
+  mutate(rent_sqm = rent/sqm,
+         rent_rooms = rent/rooms)
+
+n_plot(e1, e1$rent_sqm) +
+  labs(x = "kr per sq meter")
+ 
+n_plot(e1, e1$rent_rooms) +
+  labs(x = "kr per room")
+
+round(stat.desc(e1$rent_sqm), 2)
+round(stat.desc(e1$rent_rooms), 2)
+```
+
+#### samostatny pokoj vs. cely byt
+```{r}
+e1$type <- factor(e1$type)
+table(e1$type)
+
+e1$loc <- factor(e1$loc)
+table(e1$loc)
+
+lm1 <- lm(rent_sqm ~ 0 + type, data = e1)
+summary(lm1)
+anova(lm1)
+```
+
+#### cena za sqm podle lokace - normalizovano
+```{r}
+e2 <- e1 %>%
+  mutate(log_rent_sqm = log(rent_sqm),
+         log_rent_rooms = log(rent_rooms))
+         
+
+lm2 <- lm(log_rent_sqm ~ 0 + loc, data = e2)
+summary(lm2)
+
+lm2non <- lm(rent_sqm ~ 0 + loc, data = e2)
+summary(lm2non)
+
+lm3 <- lm(log_rent_rooms ~ 0 + loc, data = e2)
+summary(lm3)
+
+lm4 <- lm(log_rent_sqm ~ 0 + type, data = e2)
+summary(lm4)
+```
+
+#### vizualizace: kr/sqm ~ lokace
+##### reorder
+```{r}
+reor_rent <- e1 %>%
+  group_by(loc) %>%
+  summarise(loc_mean = mean(rent_sqm, na.rm = T))
+
+```
+
+##### ggploty
+```{r}
+
+plot_loc_count <- as.data.frame(table(e1$loc))
+  
+
+ggplot(e1, aes(loc, rent_sqm)) +
+  geom_violin() +
+  geom_boxplot(width = 0.1)
+
+ggplot(e1, aes(fct_reorder(loc, rent_sqm, fun = mean, .desc = TRUE, na.rm = TRUE), 
+               rent_sqm, fill = loc)) +
+  geom_bar(stat = "summary") +
+  geom_errorbar(stat ="summary", fun.data = mean_cl_boot, width = 0.5) +
+  scale_color_economist() +
+  scale_fill_economist() +
+  theme_economist() +
+  theme(axis.text.x = element_text(angle = 0, size = 8),
+        axis.title.x = element_text(face = "bold"),
+        axis.title.y = element_text(face = "bold"),
+        plot.caption = element_text(size = 5)) +
+  theme(legend.position="none") +
+  #theme(plot.margin=unit(c(0,1,0,0),"cm")) +
+  #theme(plot.background = element_rect(size = 50)) +
+  labs(title = "The City where everyone pays a premium", 
+       subtitle = "average monthly rent per sq meter in Aarhus' districts (in kr)",
+       x = "District",
+       y = "rent / sq meter",
+       caption = "29.4.18\nbased on 668 properties listed on lejebolig.dk")
+
+```
+

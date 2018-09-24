@@ -41,7 +41,6 @@ If you're not in a project in Rstudio, make sure to set your working directory h
 If you created an rstudio project, then your working directory (the directory with your data and code for these assignments) is the project directory. You can always see which working directory is used with `getwd()`. Note that this may be different in the console than in the Rmd cells (don't ask me why).
 
 ```{r}
-Hello
 getwd()
 
 library(tidyverse)
@@ -104,14 +103,14 @@ Tip: You will have to do identical work for both data sets, so to save time on t
 
 ```{r}
 #ifelse loop. First, detecting any lower case characters --> removing the last one if that is the case --> making it as.character because ifelse defaults to numeric.
+demo_2 <- demo %>%
+  mutate(SUBJ = str_remove_all(SUBJ, "[:punct:]"))
+
 lu_2 <- lu %>%
-<<<<<<< HEAD
-  mutate(SUBJ = ifelse(str_detect(SUBJ, "[a-z]"), str_remove(SUBJ, ".$"), as.character(SUBJ))) 
+  mutate(SUBJ = str_remove_all(SUBJ, "[:punct:]")) 
 
 token_2 <- token %>%
-=======
->>>>>>> 553ead4348a7fa46df25bf4adc694671c619e48d
-  mutate(SUBJ = ifelse(str_detect(SUBJ, "[a-z]"), str_remove(SUBJ, ".$"), as.character(SUBJ)))
+  mutate(SUBJ = str_remove_all(SUBJ, "[:punct:]"))
 ```
 
 2d. Now that the nitty gritty details of the different data sets are fixed, we want to make a subset of each data set only containig the variables that we wish to use in the final data set.
@@ -134,7 +133,7 @@ int_var <- unlist(str_split("SUBJ, VISIT, Ethnicity, Diagnosis, Gender, Age, ADO
 
 #https://github.com/tidyverse/dplyr/issues/3312
 
-demo_3 <- demo %>%
+demo_3 <- demo_2 %>%
   select(one_of(int_var)) %>% #selecting variables that are also in the list: one_of
   rename(nonVerbalIQ = MullenRaw, verbalIQ = ExpressiveLangRaw) #renaming MullenRaw & ExpressiveLangRaw to nonVerbalIq & verbalIQ.
 
@@ -150,26 +149,13 @@ Tip: Look up "joins" in R for data science, or google "How to merge datasets in 
 Tip: Joining / merging only works for two data frames at the time.
 
 ```{r}
-data_full <- demo_3 %>% #demo has to be first because it is the biggest
+data <- demo_3 %>% #demo has to be first because it is the biggest
   full_join(lu_3, by = c("SUBJ", "VISIT")) %>% #Joining SUBJ & VISIT which are common to all 
   full_join(token_3, by = c("SUBJ", "VISIT")) #Left join ensures that it the incomplete rows are kept. 
 
-data <- demo_3 %>% #demo has to be first because it is the biggest
-<<<<<<< HEAD
-  left_join(lu_3, by = c("SUBJ", "VISIT")) %>% #Joining SUBJ & VISIT which are common to all 
-  left_join(token_3, by = c("SUBJ", "VISIT"))
 
-anti <- anti_join(data, data_left)
-
-rm(list=setdiff(ls(), c("data", "data_left", "data_full"))) 
-#removing everything but the "data" from workspace. 
-=======
-  left_join(lu_3, by = c("SUBJ", "VISIT")) %>% #Joining SUBJ & VISIT which are common to all
-  left_join(token_3, by = c("SUBJ", "VISIT")) #Left join ensures that it the incomplete rows are kept.
-
-
-rm(list=setdiff(ls(), "data")) #removing everything but the "data" from workspace.
->>>>>>> 553ead4348a7fa46df25bf4adc694671c619e48d
+rm(list=setdiff(ls(), c("data", "demo_3", "lu_3", "token_3"))) 
+# removing everything but the "data" from workspace.
 # https://stackoverflow.com/questions/6190051/how-can-i-remove-all-objects-but-one-from-the-workspace-in-r
 ```
 
@@ -213,15 +199,33 @@ Tip: google "R how to convert character to integer" or look up the as.??? functi
 ```{r}
 data_3 <- data_2 %>%
   mutate(SUBJ = as.integer(factor(SUBJ)),
-         Gender = ifelse(Gender == 1, "F", "M"), #changes the Gender
+         Gender = ifelse(Gender == 1, "M", "F"), #changes the Gender
          Diagnosis = ifelse(Diagnosis == "A", "ASD", "TD")) #changes diagnosis
 ```
+
+Further cleanup
+
+```{r}
+# missing lingo
+data_4 <- data_3 %>%
+  filter(!(is.na(MOT_MLU) & is.na(CHI_MLU))) %>%
+  mutate(Ethnicity = case_when(Ethnicity == "Bangledeshi" ~ "Bangladeshi",
+                               TRUE ~ as.character(Ethnicity)))
+
+table(data_4$Ethnicity)
+colSums(is.na(data_4))
+
+# age
+miss_age <- data_4 %>%
+  filter(is.na(Age))
+```
+
 
 
 Write the data set into a csv file.
 
 ```{r}
-write.csv(data_3, "language_dev_asd_clean.csv", row.names = F)
+write.csv(data_4, "language_dev_asd_clean_2.csv", row.names = F)
 ```
 
 
