@@ -288,14 +288,19 @@ corr = round(cor(cor_data,method = "spearman"),2)
 #corrplot
 library(corrplot)
 library(RColorBrewer)
+library(lmerTest)
 corrplot(corr,method="number",col=brewer.pal(n=8, name="PuOr"),type="upper",tl.col="darkblue")
+corrplot(corr,col = brewer.pal(n=8, name="PuOr"), type = "upper", tl.col="darkblue") #different way
 
 #stepwise 
 basis <- lm(CHI_MLU ~ VISIT + Gender + Ethnicity + ADOS_1 + nonVerbalIQ_1 + verbalIQ_1 + MOT_MLU, data = model_data)
 
-summary(basis) #some NAs
+#stepwise w. lmer 
+big_model <- lmer(CHI_MLU ~ VISIT + Gender + Ethnicity + ADOS_1 + nonVerbalIQ_1 + verbalIQ_1 + MOT_MLU + (1+VISIT|SUBJ), data = model_data)
 
-step1 <- step(basis, direction = "both")
+summary(big_model) #some NAs
+
+step1 <- step(big_model)
 summary(step1) 
 
 ```
