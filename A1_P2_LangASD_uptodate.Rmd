@@ -306,15 +306,15 @@ cor_data = select(model_data, VISIT, Age, ADOS_1, nonVerbalIQ_1, verbalIQ_1, MOT
   filter(!is.na(Age))
 corr = round(cor(cor_data,method = "spearman"),2)
 
-#stepwise w. lmer 
+#stepwise w. lmer for quadratic  
 big_model <- lmer(CHI_MLU ~ VISIT + I(VISIT^2) + Diagnosis + Gender + Ethnicity + ADOS_1 + nonVerbalIQ_1 + verbalIQ_1 + MOT_MLU + tokens_MOT + types_MOT + (1+VISIT|SUBJ), data = model_data)
 
 (step_res <- step(big_model))
 final <- get_model(step_res)
 anova(final) 
-
 summary(final) #works, good t-values 
 
+#stedwise w. lmer for cubic 
 super_model <- lmer(CHI_MLU ~ VISIT + I(VISIT^2) + I(VISIT^3) + Diagnosis + Gender + Ethnicity + ADOS_1 + nonVerbalIQ_1 + verbalIQ_1 + MOT_MLU + tokens_MOT + types_MOT + (1+VISIT|SUBJ), data = model_data)
 
 (step_res <- step(super_model))
@@ -324,11 +324,9 @@ anova(cubic)
 r.squaredGLMM(cubic) #sucks. 
 r.squaredGLMM(final) #best marginal 
 
-
-#motivated model 
-motivated_model <- lmer(CHI_MLU ~ VISIT + I(VISIT^2) + ADOS_1 + nonVerbalIQ_1 + MOT_MLU + tokens_MOT + (1+VISIT|SUBJ), data = model_data)
-
-summary(motivated_model)
+#compared to the quadratic model earlier 
+anova(m_quadratic, final) 
+anova(final) 
 
 ```
 
