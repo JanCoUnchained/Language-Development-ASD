@@ -1,6 +1,6 @@
 ---
 title: "Assignment 1 - Language Development in ASD - part 2"
-author: "Carl"
+author: "Carl, Anders, Magnus, Jan, Victor"
 date: \today{}
 output: pdf_document
 ---
@@ -321,8 +321,8 @@ super_model <- lmer(CHI_MLU ~ VISIT + I(VISIT^2) + I(VISIT^3) + Diagnosis + Gend
 cubic <- get_model(step_res)
 anova(cubic) 
 
-r.squaredGLMM(cubic) #sucks. 
-r.squaredGLMM(final) #best marginal 
+r.squaredGLMM(cubic) 
+r.squaredGLMM(final) #best marginal .57
 
 #compared to the quadratic model earlier 
 anova(m_quadratic, final) 
